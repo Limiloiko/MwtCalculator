@@ -7,7 +7,7 @@ __pycache__/
 *.so
 
 # extensions
-*.csv
+*.txt
 *.xls
 
 # Distribution / packaging

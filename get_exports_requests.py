@@ -1,4 +1,4 @@
-# Main script
+# get_exports_requests.py
 
 ## imports
 import sys
@@ -106,7 +106,7 @@ def mwt_export(session):
                 file_response = session.get(download_url, headers=headers)
                 if file_response.ok:
 
-                    file_name = os.path.join("downloads", f"{month_id}.csv")
+                    file_name = os.path.join("downloads", f"{month_id}.txt")
                     with open(file_name, "wb") as file:
                         file.write(file_response.content)
                 else:

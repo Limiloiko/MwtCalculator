@@ -1,4 +1,5 @@
 attrs==24.2.0
+pandas
 beautifulsoup4==4.12.3
 certifi==2024.8.30
 cffi==1.17.1
