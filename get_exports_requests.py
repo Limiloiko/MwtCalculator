@@ -24,11 +24,6 @@ USERNAME = "47528"
 LOGIN_URL = "https://131.gospec.net/webtimevigo/login.php?make=1"
 CURRENT_MONTH = "https://131.gospec.net/webtimevigo/mt.php?op=5"
 
-def get_cookies(cookie_jar, domain):
-    cookie_dict = cookie_jar.get_dict(domain=domain)
-    found = ['%s=%s' % (name, value) for (name, value) in cookie_dict.items()]
-    return ';'.join(found)
-
 logging.basicConfig(level=logging.NOTSET)
 
 def mwt_login():
@@ -57,11 +52,11 @@ def mwt_login():
     else:
         sys.exit("Login error!")
 
-    #TODO: This is not working!
-    return get_cookies(response.cookies, "gospec.net")
+    #TODO: This is not working! Cookies not filled!?
+    return session
 
 
-def mwt_export():
+def mwt_export(session):
     """Function that is responsible of accessing mwt and download each month tics"""
 
     month = "11"
@@ -93,7 +88,7 @@ def mwt_export():
         }
 
         # get response, the server will generate a file to access and download
-        response = requests.get(url, headers=headers)
+        response = session.get(url, headers=headers)
 
         if response.ok:
             # parse response to get new url
@@ -108,10 +103,10 @@ def mwt_export():
 
                 download_url = os.path.join("https://131.gospec.net/webtimevigo", relative_url.lstrip("../"))
 
-                file_response = requests.get(download_url, headers=headers)
+                file_response = session.get(download_url, headers=headers)
                 if file_response.ok:
 
-                    file_name = os.path.join("downloads", f"{month_id}.xls")
+                    file_name = os.path.join("downloads", f"{month_id}.csv")
                     with open(file_name, "wb") as file:
                         file.write(file_response.content)
                 else:
@@ -125,12 +120,11 @@ def mwt_export():
 def main():
     """Main function"""
     ### Login to Mwt
-    cookies = mwt_login()
+    session = mwt_login()
 
     ### Download this year months, one by one
-    mwt_export(cookies)
+    mwt_export(session)
 
-    ### process each export and calculate things
 
 if __name__ == "__main__":
     main()
