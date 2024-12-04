@@ -4,6 +4,7 @@
 import sys
 import os
 import logging
+import pandas as pd
 from datetime import datetime
 
 
@@ -35,14 +36,23 @@ def calculate_day(day, list_day):
     day_hours = 0
 
     if "festiva horas extras" in list_day:
-        day_hours = 0
+        day_hours = 8
     else:
 
         ticks = list_day[2][:-1].split("|")
 
-        if len(ticks) % 2 != 0:
-            # maybe day with errors?
-            logger.debug(f"Error in one day! missing ticks! {day}")
+        # Special days are taken as E 24:00
+        if "24:00" in list_day[2]:
+            logger.debug(f"Found a vacations day!")
+            day_hours = 8
+
+        elif len(ticks) % 2 != 0:
+            # check if future day?
+            current_day = datetime.now()
+            date = datetime.strptime(day, "%d-%m-%Y")
+
+            if current_day > date:
+                logger.error(f"Error in day {day}! missing ticks?!")
             day_hours = 8
         else:
             for pair in range(0, len(ticks), 2):
@@ -69,10 +79,11 @@ def process_year(txt_file):
             line = line.split("\t")
             list_line = line[4:-4]
 
+            # do not consider weekends
             if "Sa" in list_line or "Do" in list_line:
                 continue
             elif "Lu" in list_line:
-                logger.debug("Lunes found, incrementing cw number and reseting total hours")
+                logger.debug("Lunes found, incrementing cw number and resetting total hours")
                 summary.append({"cw": cw_number, "total": week_hours})
                 cw_number += 1
                 week_hours = 0
@@ -83,12 +94,42 @@ def process_year(txt_file):
     return summary
 
 
+def create_html(data):
+    """Function that is in charge of creating a simple html with the data processed"""
+
+    df = pd.DataFrame(data)
+    html_table = df.to_html(index=False)
+
+    with open("reporte.html", "w") as file:
+        file.write(f"""
+        <html>
+            <head>
+                <title>Reporte</title>
+            </head>
+            <body>
+                <h1>Reporte de Datos</h1>
+                {html_table}
+            </body>
+        </html>
+    """)
+
+
 def main():
     """Main function"""
-    # merge_reports()
+    if not os.path.exists("downloads/2024.txt"):
+        merge_reports()
+
     summary = process_year("downloads/2024.txt")
-    import pprint as pp
-    pp.pprint(summary)
+
+    create_html(summary)
+
+    # sum all hours
+    total_hours = 0
+    # do not take 0 as valid cw
+    for cw in summary[1:]:
+        total_hours += (cw["total"] - 40)
+
+    print("Balance:", total_hours)
 
 
 if __name__ == "__main__":

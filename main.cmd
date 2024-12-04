@@ -12,6 +12,7 @@ call py -3 get_exports_requests.py
 ::IF %ERRORLEVEL% NEQ 0 (Echo An error was found &Exit /b 1)
 
 ::rem Parse exports
+call py -3 process_exports.py
 
 echo Script finished!
 pause
