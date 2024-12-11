@@ -6,38 +6,44 @@ import os
 import logging
 import requests
 import keyring
+import argparse
 from bs4 import BeautifulSoup
 from requests.cookies import RequestsCookieJar
 
+
 class MyCookieJar(RequestsCookieJar):
+    #TODO: This is not working as expected!
     def clear_expired(self):
         # do nothing to not remove expired cookies
         pass
+
     def clear_expired_cookies(self) -> None:
         pass
+
     def clear_session_cookies(self) -> None:
         pass
 
+
 SERVICE_NAME = "MWT"
-USERNAME = "47528"
 
 LOGIN_URL = "https://131.gospec.net/webtimevigo/login.php?make=1"
 CURRENT_MONTH = "https://131.gospec.net/webtimevigo/mt.php?op=5"
 
 logging.basicConfig(level=logging.NOTSET)
 
-def mwt_login():
+
+def mwt_login(user):
     """A sample function that processes the input argument."""
     # check if credentials already stored in windows credentials manager
 
-    password = keyring.get_password(SERVICE_NAME, USERNAME)
+    password = keyring.get_password(SERVICE_NAME, user)
 
     if not password:
         password = input("Please, write your password:")
-        keyring.set_password(SERVICE_NAME, USERNAME, password)
+        keyring.set_password(SERVICE_NAME, user, password)
 
     payload = {
-        "username": USERNAME,
+        "username": user,
         "password": password
     }
     # Open a session to save cookies and so
@@ -45,7 +51,7 @@ def mwt_login():
     # set custom class to handle cookies to keep them
     session.cookies = MyCookieJar()
     # Try to connect
-    response = session.post(LOGIN_URL, data=payload, allow_redirects=False)
+    response = session.post(LOGIN_URL, data=payload, allow_redirects=False, verify=False)
 
     if response.ok:
         print("Login success")
@@ -56,17 +62,14 @@ def mwt_login():
     return session
 
 
-def mwt_export(session):
+def mwt_export(session, user, year):
     """Function that is responsible of accessing mwt and download each month tics"""
-
-    month = "11"
-    year = "2024"
 
     for month in range(1, 13, 1):
         print("Downloading month: ", month)
         month_id = f"{year}{str(month).zfill(2)}"
 
-        url = f"https://131.gospec.net/webtimevigo/common/diario_pdf.php?opt=2&mes={month_id}&emid={USERNAME}"
+        url = f"https://131.gospec.net/webtimevigo/common/diario_pdf.php?opt=2&mes={month_id}&emid={user}"
 
         headers = {
             "Host": "131.gospec.net",
@@ -76,7 +79,7 @@ def mwt_export(session):
             "Accept-Encoding": "gzip, deflate, br, zstd",
             "Connection": "keep-alive",
             "Referer": "https://131.gospec.net/webtimevigo/mt/mov_iframes.php?app=1&op=5",
-            "Cookie": "mywtuser=47528; mywtpass=47rwkQlTxReaA; mywtprv=47528-0-0",
+            "Cookie": f"mywtuser={user}; mywtpass=47rwkQlTxReaA; mywtprv={user}-0-0",
             "Upgrade-Insecure-Requests": "1",
             "Sec-Fetch-Dest": "iframe",
             "Sec-Fetch-Mode": "navigate",
@@ -88,7 +91,7 @@ def mwt_export(session):
         }
 
         # get response, the server will generate a file to access and download
-        response = session.get(url, headers=headers)
+        response = session.get(url, headers=headers, verify=False)
 
         if response.ok:
             # parse response to get new url
@@ -103,7 +106,7 @@ def mwt_export(session):
 
                 download_url = os.path.join("https://131.gospec.net/webtimevigo", relative_url.lstrip("../"))
 
-                file_response = session.get(download_url, headers=headers)
+                file_response = session.get(download_url, headers=headers, verify=False)
                 if file_response.ok:
 
                     file_name = os.path.join("downloads", f"{month_id}.txt")
@@ -117,13 +120,24 @@ def mwt_export(session):
             sys.exit("Response not ok for xls request!")
 
 
+def get_script_arguments():
+    """Function that processes the input arguments."""
+    parser = argparse.ArgumentParser(description="Download MWT exports")
+    parser.add_argument("--user", type=str, help="User to login")
+    parser.add_argument("--year", type=int, help="Year to download")
+    return parser.parse_args()
+
+
 def main():
     """Main function"""
-    ### Login to Mwt
-    session = mwt_login()
+    # handle input arguments
+    args = get_script_arguments()
 
-    ### Download this year months, one by one
-    mwt_export(session)
+    # Login to Mwt
+    session = mwt_login(args.user)
+
+    # Download this year months, one by one
+    mwt_export(session, args.user, args.year)
 
 
 if __name__ == "__main__":

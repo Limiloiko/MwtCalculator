@@ -4,6 +4,7 @@
 import sys
 import os
 import logging
+import argparse
 import pandas as pd
 from datetime import datetime
 
@@ -11,7 +12,7 @@ from datetime import datetime
 logger = logging.getLogger(__file__)
 
 
-def merge_reports():
+def merge_reports(year):
     """Open all files inside download and create one single file with all year reports"""
 
     merged_file = []
@@ -28,7 +29,7 @@ def merge_reports():
                 merged_file += contents[4:-1]
 
     # save merged file
-    with open(os.path.join("downloads", "2024.txt"), "w") as f:
+    with open(os.path.join("downloads", f"{year}.txt"), "w") as f:
         f.writelines(merged_file)
 
 
@@ -43,7 +44,7 @@ def calculate_day(day, list_day):
 
         # Special days are taken as E 24:00
         if "24:00" in list_day[2]:
-            logger.debug(f"Found a vacations day!")
+            logger.debug("Found a vacations day!")
             day_hours = 8
 
         elif len(ticks) % 2 != 0:
@@ -111,15 +112,27 @@ def create_html(data):
                 {html_table}
             </body>
         </html>
+
     """)
+
+
+def get_script_arguments():
+    """Function that processes the input arguments."""
+    parser = argparse.ArgumentParser(description="Download MWT exports")
+    parser.add_argument("--year", type=int, help="Year to download")
+    return parser.parse_args()
 
 
 def main():
     """Main function"""
-    if not os.path.exists("downloads/2024.txt"):
-        merge_reports()
 
-    summary = process_year("downloads/2024.txt")
+    # parse script arguments
+    args = get_script_arguments()
+
+    if not os.path.exists(f"downloads/{args.year}.txt"):
+        merge_reports(args.year)
+
+    summary = process_year(f"downloads/{args.year}.txt")
 
     create_html(summary)
 
