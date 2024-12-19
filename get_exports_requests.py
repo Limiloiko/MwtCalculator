@@ -4,32 +4,20 @@
 import sys
 import os
 import logging
+import warnings
 import requests
 import keyring
 import argparse
 from bs4 import BeautifulSoup
-from requests.cookies import RequestsCookieJar
 
-
-class MyCookieJar(RequestsCookieJar):
-    #TODO: This is not working as expected!
-    def clear_expired(self):
-        # do nothing to not remove expired cookies
-        pass
-
-    def clear_expired_cookies(self) -> None:
-        pass
-
-    def clear_session_cookies(self) -> None:
-        pass
-
+warnings.filterwarnings("ignore")
 
 SERVICE_NAME = "MWT"
 
 LOGIN_URL = "https://131.gospec.net/webtimevigo/login.php?make=1"
 CURRENT_MONTH = "https://131.gospec.net/webtimevigo/mt.php?op=5"
 
-logging.basicConfig(level=logging.NOTSET)
+logging.basicConfig(level=logging.INFO)
 
 
 def mwt_login(user):
@@ -43,22 +31,20 @@ def mwt_login(user):
         keyring.set_password(SERVICE_NAME, user, password)
 
     payload = {
-        "username": user,
-        "password": password
+        "duser": user,
+        "dpass": password
     }
     # Open a session to save cookies and so
     session = requests.Session()
-    # set custom class to handle cookies to keep them
-    session.cookies = MyCookieJar()
+
     # Try to connect
-    response = session.post(LOGIN_URL, data=payload, allow_redirects=False, verify=False)
+    response = session.post(LOGIN_URL, data=payload, allow_redirects=True, verify=False)
 
     if response.ok:
         print("Login success")
     else:
         sys.exit("Login error!")
 
-    #TODO: This is not working! Cookies not filled!?
     return session
 
 
@@ -71,27 +57,8 @@ def mwt_export(session, user, year):
 
         url = f"https://131.gospec.net/webtimevigo/common/diario_pdf.php?opt=2&mes={month_id}&emid={user}"
 
-        headers = {
-            "Host": "131.gospec.net",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3",
-            "Accept-Encoding": "gzip, deflate, br, zstd",
-            "Connection": "keep-alive",
-            "Referer": "https://131.gospec.net/webtimevigo/mt/mov_iframes.php?app=1&op=5",
-            "Cookie": f"mywtuser={user}; mywtpass=47rwkQlTxReaA; mywtprv={user}-0-0",
-            "Upgrade-Insecure-Requests": "1",
-            "Sec-Fetch-Dest": "iframe",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-Site": "same-origin",
-            "Sec-Fetch-User": "?1",
-            "If-Modified-Since": "Fri, 29 Nov 2024 14:24:54 GMT",
-            "Priority": "u=4",
-            "TE": "trailers"
-        }
-
         # get response, the server will generate a file to access and download
-        response = session.get(url, headers=headers, verify=False)
+        response = session.get(url, verify=False)
 
         if response.ok:
             # parse response to get new url
@@ -106,7 +73,7 @@ def mwt_export(session, user, year):
 
                 download_url = os.path.join("https://131.gospec.net/webtimevigo", relative_url.lstrip("../"))
 
-                file_response = session.get(download_url, headers=headers, verify=False)
+                file_response = session.get(download_url, verify=False)
                 if file_response.ok:
 
                     file_name = os.path.join("downloads", f"{month_id}.txt")
