@@ -48,14 +48,14 @@ def mwt_login(user):
     return session
 
 
-def mwt_export(session, user, year):
+def mwt_export(session, user, year, user_id):
     """Function that is responsible of accessing mwt and download each month tics"""
 
     for month in range(1, 13, 1):
         print("Downloading month: ", month)
         month_id = f"{year}{str(month).zfill(2)}"
 
-        url = f"https://131.gospec.net/webtimevigo/common/diario_pdf.php?opt=2&mes={month_id}&emid={user}"
+        url = f"https://131.gospec.net/webtimevigo/common/diario_pdf.php?opt=2&mes={month_id}&emid={user_id}"
 
         # get response, the server will generate a file to access and download
         response = session.get(url, verify=False)
@@ -95,6 +95,16 @@ def get_script_arguments():
     return parser.parse_args()
 
 
+def parse_cookies(session):
+    print("Parsing cookies")
+    for cookie_name, cookie_value in session.cookies.items():
+        print(f"{cookie_name}: {cookie_value}")
+        if cookie_name == "mywtuser":
+            return cookie_value
+
+    sys.exit("No user_id found in cookies")
+
+
 def main():
     """Main function"""
     # handle input arguments
@@ -103,8 +113,11 @@ def main():
     # Login to Mwt
     session = mwt_login(args.user)
 
+    # ger user_id from cookies
+    user_id = parse_cookies(session)
+
     # Download this year months, one by one
-    mwt_export(session, args.user, args.year)
+    mwt_export(session, args.user, args.year, user_id)
 
 
 if __name__ == "__main__":
