@@ -269,3 +269,4 @@ if __name__ == "__main__":
         total_hours += (cw["total"] - 40)
 
     print("Hours balance:", total_hours)
+    input("Press enter to exit ...")
