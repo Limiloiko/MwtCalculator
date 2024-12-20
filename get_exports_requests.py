@@ -98,11 +98,12 @@ def get_script_arguments():
 def parse_cookies(session):
     print("Parsing cookies")
     for cookie_name, cookie_value in session.cookies.items():
-        print(f"{cookie_name}: {cookie_value}")
-        if cookie_name == "mywtuser":
+        if cookie_name == "mywtprv":
+            cookie_value = cookie_value.split("-")[0]
+            logging.debug("Session ID found: ", cookie_value)
             return cookie_value
 
-    sys.exit("No user_id found in cookies")
+    sys.exit("No user_id found in cookies!")
 
 
 def main():
